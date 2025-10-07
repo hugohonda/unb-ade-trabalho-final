@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from config import INPUT_SITAF, OUTPUT_SIFAF, TIPO_FATOR, INPUT_ESTATISTICAS
+from config import INPUT_SITAF, OUTPUT_SIFAF, INPUT_ESTATISTICAS
 
 
 def _mapear_tipo_tributo(valor_str: str) -> str:
@@ -48,11 +48,11 @@ def carregar_fatores_por_tributo(caminho_estatisticas: Path) -> dict:
         df_est.groupby("tipo_tributo")["media_prazo"].median().dropna()
     )
     if med_por_tipo.empty:
-        return TIPO_FATOR
+        raise ValueError("Não foi possível calcular a mediana do prazo por tipo de tributo")
 
     med_global = med_por_tipo.median()
     if med_global <= 0 or np.isnan(med_global):
-        return TIPO_FATOR
+        raise ValueError("Não foi possível calcular a mediana global do prazo")
 
     fatores = (med_por_tipo / med_global).to_dict()
     # Garante presença das chaves esperadas

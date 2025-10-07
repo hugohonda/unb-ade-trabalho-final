@@ -29,64 +29,125 @@ def mochila_ag(
     taxa_mutacao: float,
     semente: int,
 ) -> list[int]:
-    """Algoritmo Genético simples para Mochila (0-1)."""
+    """Algoritmo Genético para Mochila (0-1) com operadores corretos."""
     rnd = random.Random(semente)
     n = len(valores)
 
     def aptidao(bitset):
-        peso = 0.0
-        valor = 0.0
-        for i, b in enumerate(bitset):
-            if b:
-                peso += pesos[i]
-                if peso > capacidade:
-                    return -1e12
-                valor += valores[i]
-        return valor
+        """Calcula aptidão: valor total se viável, 0 se inviável."""
+        peso_total = sum(pesos[i] for i, b in enumerate(bitset) if b)
+        if peso_total > capacidade:
+            return 0.0  # Solução inválida
+        return sum(valores[i] for i, b in enumerate(bitset) if b)
 
     def individuo_aleatorio():
-        p = min(0.5, capacidade / (float(pesos.sum()) + 1e-9))
-        return [1 if rnd.random() < p else 0 for _ in range(n)]
+        """Gera indivíduo aleatório respeitando capacidade."""
+        individuo = [0] * n
+        peso_atual = 0.0
 
-    def cruzar(a, b):
+        # Ordena itens por razão valor/peso
+        razoes = [(i, valores[i] / pesos[i]) for i in range(n)]
+        razoes.sort(key=lambda x: x[1], reverse=True)
+
+        # Adiciona itens aleatoriamente respeitando capacidade
+        for i, _ in razoes:
+            if rnd.random() < 0.3 and peso_atual + pesos[i] <= capacidade:
+                individuo[i] = 1
+                peso_atual += pesos[i]
+
+        return individuo
+
+    def selecao_torneio(pop, tamanho_torneio=3):
+        """Seleção por torneio."""
+        selecionados = []
+        for _ in range(len(pop)):
+            torneio = rnd.sample(pop, min(tamanho_torneio, len(pop)))
+            vencedor = max(torneio, key=aptidao)
+            selecionados.append(vencedor[:])
+        return selecionados
+
+    def cruzar(p1, p2):
+        """Crossover uniforme que mantém viabilidade."""
         if rnd.random() > taxa_cruzamento:
-            return a[:], b[:]
-        c = rnd.randrange(1, n)
-        return a[:c] + b[c:], b[:c] + a[c:]
+            return p1[:], p2[:]
+
+        f1, f2 = [0] * n, [0] * n
+        peso_f1, peso_f2 = 0.0, 0.0
+
+        for i in range(n):
+            if rnd.random() < 0.5:
+                # Herda de p1
+                if p1[i] and peso_f1 + pesos[i] <= capacidade:
+                    f1[i] = 1
+                    peso_f1 += pesos[i]
+                if p2[i] and peso_f2 + pesos[i] <= capacidade:
+                    f2[i] = 1
+                    peso_f2 += pesos[i]
+            else:
+                # Herda de p2
+                if p2[i] and peso_f1 + pesos[i] <= capacidade:
+                    f1[i] = 1
+                    peso_f1 += pesos[i]
+                if p1[i] and peso_f2 + pesos[i] <= capacidade:
+                    f2[i] = 1
+                    peso_f2 += pesos[i]
+
+        return f1, f2
 
     def mutar(ind):
+        """Mutação que mantém viabilidade."""
+        peso_atual = sum(pesos[i] for i, b in enumerate(ind) if b)
+
         for i in range(n):
             if rnd.random() < taxa_mutacao:
-                ind[i] ^= 1
+                if ind[i] == 1:
+                    # Remove item
+                    ind[i] = 0
+                    peso_atual -= pesos[i]
+                else:
+                    # Adiciona item se cabe
+                    if peso_atual + pesos[i] <= capacidade:
+                        ind[i] = 1
+                        peso_atual += pesos[i]
+
         return ind
 
+    # Inicialização
     populacao_atual = [individuo_aleatorio() for _ in range(populacao)]
     melhor = max(populacao_atual, key=aptidao)
     melhor_fit = aptidao(melhor)
 
-    for _ in range(geracoes):
-        selecionados = []
-        for _ in range(populacao):
-            a, b = rnd.randrange(populacao), rnd.randrange(populacao)
-            sa = populacao_atual[a]
-            sb = populacao_atual[b]
-            selecionados.append(sa if aptidao(sa) >= aptidao(sb) else sb)
-        proxima = []
-        for i in range(0, populacao, 2):
+    # Evolução
+    for geracao in range(geracoes):
+        # Seleção
+        selecionados = selecao_torneio(populacao_atual)
+
+        # Crossover e mutação
+        proxima_geracao = []
+        for i in range(0, len(selecionados), 2):
             p1 = selecionados[i]
-            p2 = selecionados[i + 1 if i + 1 < populacao else 0]
+            p2 = selecionados[i + 1] if i + 1 < len(selecionados) else selecionados[0]
+
             f1, f2 = cruzar(p1, p2)
-            proxima.append(mutar(f1))
-            proxima.append(mutar(f2))
-        cand_melhor = max(proxima, key=aptidao)
-        cand_fit = aptidao(cand_melhor)
-        if cand_fit >= melhor_fit:
+            f1 = mutar(f1)
+            f2 = mutar(f2)
+
+            proxima_geracao.extend([f1, f2])
+
+        # Elitismo: mantém o melhor
+        proxima_geracao = proxima_geracao[:populacao]
+        cand_melhor = max(proxima_geracao, key=aptidao)
+        if aptidao(cand_melhor) > melhor_fit:
             melhor = cand_melhor[:]
-            melhor_fit = cand_fit
-        else:
-            pior_idx = min(range(populacao), key=lambda k: aptidao(proxima[k]))
-            proxima[pior_idx] = melhor[:]
-        populacao_atual = proxima
+            melhor_fit = aptidao(melhor)
+
+        # Substitui pior indivíduo pelo melhor
+        pior_idx = min(
+            range(len(proxima_geracao)), key=lambda k: aptidao(proxima_geracao[k])
+        )
+        proxima_geracao[pior_idx] = melhor[:]
+
+        populacao_atual = proxima_geracao
 
     return [i for i, b in enumerate(melhor) if b]
 

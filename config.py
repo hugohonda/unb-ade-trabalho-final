@@ -28,17 +28,7 @@ DIAS_UTEIS = 220
 CAPACIDADE_PADRAO = float(NUM_PROCURADORES * HORAS_DIA * DIAS_UTEIS)
 
 # Resolução (em horas) para discretização na DP
-RESOLUCAO_PADRAO = 0.25
-
-# ========================= Heurística de esforço =========================
-# Fatores multiplicativos por tipo de tributo (heurística de esforço)
-TIPO_FATOR = {
-    "ICMS": 1.2,
-    "IPVA": 1.0,
-    "ISS": 1.1,
-    "ITCD": 1.3,
-    "OUTROS": 1.0,
-}
+RESOLUCAO_PADRAO = 8.0
 
 # ========================= Hiperparâmetros do AG =========================
 POPULACAO = 80

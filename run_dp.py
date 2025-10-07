@@ -18,36 +18,55 @@ def mochila_dp(
     valores: np.ndarray, pesos: np.ndarray, capacidade: float, resolucao: float
 ) -> list[int]:
     """
-    Programação Dinâmica 0-1 (discretizando horas pela resolução informada).
+    Programação Dinâmica 0-1 com otimização de espaço.
     Retorna índices relativos dos itens selecionados.
     """
-    pesos_discretos = (np.round(pesos / resolucao)).astype(int)
+    # Filtra itens que cabem na mochila
+    itens_validos = pesos <= capacidade
+    if not itens_validos.any():
+        return []
+
+    valores_filtrados = valores[itens_validos]
+    pesos_filtrados = pesos[itens_validos]
+    indices_originais = np.where(itens_validos)[0]
+
+    # Discretização
+    pesos_discretos = (np.round(pesos_filtrados / resolucao)).astype(int)
     capacidade_discreta = int(np.floor(capacidade / resolucao))
-    n = len(valores)
+    n = len(valores_filtrados)
 
-    tabela = np.zeros((n + 1, capacidade_discreta + 1), dtype=float)
-    escolhas = np.zeros((n + 1, capacidade_discreta + 1), dtype=bool)
+    # Otimização: usa apenas duas linhas da tabela
+    anterior = np.zeros(capacidade_discreta + 1, dtype=float)
+    atual = np.zeros(capacidade_discreta + 1, dtype=float)
+    escolhas = np.zeros((n, capacidade_discreta + 1), dtype=bool)
 
-    for i in range(1, n + 1):
-        peso_i = pesos_discretos[i - 1]
-        valor_i = valores[i - 1]
-        anterior = tabela[i - 1]
-        atual = tabela[i]
+    for i in range(n):
+        peso_i = pesos_discretos[i]
+        valor_i = valores_filtrados[i]
+
+        # Copia linha anterior
         atual[:] = anterior
-        if peso_i <= capacidade_discreta:
-            candidato = np.full(capacidade_discreta + 1, -np.inf, dtype=float)
-            candidato[peso_i:] = anterior[:-peso_i] + valor_i
-            melhor = candidato > atual
-            atual[melhor] = candidato[melhor]
-            escolhas[i, melhor] = True
 
+        if peso_i <= capacidade_discreta:
+            # Calcula candidato: anterior[j - peso_i] + valor_i
+            for j in range(peso_i, capacidade_discreta + 1):
+                candidato = anterior[j - peso_i] + valor_i
+                if candidato > atual[j]:
+                    atual[j] = candidato
+                    escolhas[i, j] = True
+
+        # Troca as linhas
+        anterior, atual = atual, anterior
+
+    # Reconstrói solução
     selecionados = []
     restante = capacidade_discreta
-    for i in range(n, 0, -1):
+
+    for i in range(n - 1, -1, -1):
         if escolhas[i, restante]:
-            selecionados.append(i - 1)
-            restante -= pesos_discretos[i - 1]
-    selecionados.reverse()
+            selecionados.append(indices_originais[i])
+            restante -= pesos_discretos[i]
+
     return selecionados
 
 
