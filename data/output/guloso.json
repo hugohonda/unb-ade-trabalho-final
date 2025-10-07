@@ -1,7 +1,29 @@
 {
-  "algoritmo": "guloso",
-  "n_processos": 483,
-  "horas_total": 52699.56894641096,
-  "valor_total": 193942411.41,
-  "capacidade": 52800.0
+  "algorithm": "guloso",
+  "timestamp": "2025-10-07T23:06:51.823111+00:00",
+  "params": {
+    "capacity": 52800.0
+  },
+  "counts": {
+    "n_candidates": 550715,
+    "n_selected": 483,
+    "selection_rate": 0.000877
+  },
+  "totals": {
+    "hours_total": 52699.57,
+    "days_business_total": 6587.45,
+    "months_business_total": 359.32,
+    "value_total_brl": "R$ 193.942.411,41"
+  },
+  "metrics": {
+    "avg_hour_value_brl": "R$ 3.680,15",
+    "avg_value_per_process_brl": "R$ 401.537,08",
+    "avg_hours_per_process": 109.11,
+    "avg_business_days_per_process": 13.64
+  },
+  "runtime": {
+    "seconds": 0.33263163100127713,
+    "python": "3.10.12",
+    "cpu_count": 20
+  }
 }

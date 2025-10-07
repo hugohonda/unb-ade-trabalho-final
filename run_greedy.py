@@ -56,7 +56,7 @@ def executar() -> None:
     elapsed = time.perf_counter() - t0
 
     resumo = build_summary(
-        algorithm="greedy",
+        algorithm="guloso",
         inputs={"npz": args.npz, "csv": caminho_csv},
         params={"capacity": float(args.capacidade)},
         df_candidates=df,

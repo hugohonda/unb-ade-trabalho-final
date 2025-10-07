@@ -7,6 +7,8 @@ from typing import Any, Dict, Tuple
 import numpy as np
 import pandas as pd
 
+from config import DIAS_UTEIS, HORAS_DIA
+
 
 def load_data(
     caminho_npz: Path,
@@ -43,17 +45,17 @@ def system_metrics() -> Dict[str, Any]:
         "python": sys.version.split()[0],
         "cpu_count": os.cpu_count(),
     }
-    # Tenta capturar memória pico (Linux)
-    try:
-        import resource  # type: ignore
-
-        usage = resource.getrusage(resource.RUSAGE_SELF)
-        # ru_maxrss: KiB em Linux
-        rss_mb = float(usage.ru_maxrss) / 1024.0
-        metrics["max_rss_mb"] = rss_mb
-    except Exception:
-        pass
     return metrics
+
+
+def format_brl(valor: float) -> str:
+    """Formata número monetário em BRL (R$ 1.234,56) sem depender de locale."""
+    try:
+        s = f"{float(valor):,.2f}"
+        s = s.replace(",", "_").replace(".", ",").replace("_", ".")
+        return f"R$ {s}"
+    except Exception:
+        return f"R$ {valor}"
 
 
 def build_summary(
@@ -66,24 +68,47 @@ def build_summary(
     elapsed_seconds: float,
 ) -> Dict[str, Any]:
     """Monta um resumo padronizado para as saídas dos runners."""
+    n_candidates = int(len(df_candidates))
+    n_selected = int(len(df_selected))
+
+    hours_total = float(df_selected["peso_horas"].sum()) if n_selected else 0.0
+    value_total = float(df_selected["valor"].sum()) if n_selected else 0.0
+
+    # Conversões de esforço
+    days_business_total = hours_total / float(HORAS_DIA) if hours_total else 0.0
+    months_business_total = (
+        days_business_total / (float(DIAS_UTEIS) / 12.0) if days_business_total else 0.0
+    )
+
+    # Médias úteis
+    avg_hour_value = value_total / hours_total if hours_total > 0 else 0.0
+    avg_value_per_process = value_total / n_selected if n_selected > 0 else 0.0
+    avg_hours_per_process = hours_total / n_selected if n_selected > 0 else 0.0
+    avg_business_days_per_process = (
+        avg_hours_per_process / float(HORAS_DIA) if avg_hours_per_process > 0 else 0.0
+    )
+    selection_rate = (n_selected / n_candidates) if n_candidates > 0 else 0.0
+
     return {
         "algorithm": algorithm,
         "timestamp": pd.Timestamp.utcnow().isoformat(),
-        "inputs": {
-            k: (str(v) if isinstance(v, (Path,)) else v) for k, v in inputs.items()
-        },
         "params": params,
         "counts": {
-            "n_candidates": int(len(df_candidates)),
-            "n_selected": int(len(df_selected)),
+            "n_candidates": n_candidates,
+            "n_selected": n_selected,
+            "selection_rate": round(selection_rate, 6),
         },
         "totals": {
-            "hours_total": float(df_selected["peso_horas"].sum())
-            if not df_selected.empty
-            else 0.0,
-            "value_total": float(df_selected["valor"].sum())
-            if not df_selected.empty
-            else 0.0,
+            "hours_total": round(hours_total, 2),
+            "days_business_total": round(days_business_total, 2),
+            "months_business_total": round(months_business_total, 2),
+            "value_total_brl": format_brl(value_total),
+        },
+        "metrics": {
+            "avg_hour_value_brl": format_brl(avg_hour_value),
+            "avg_value_per_process_brl": format_brl(avg_value_per_process),
+            "avg_hours_per_process": round(avg_hours_per_process, 2),
+            "avg_business_days_per_process": round(avg_business_days_per_process, 2),
         },
         "runtime": {
             "seconds": float(elapsed_seconds),
