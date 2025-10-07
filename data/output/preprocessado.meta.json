@@ -1,0 +1,19 @@
+{
+  "linhas_entrada": 550715,
+  "linhas_saida": 550715,
+  "csv_saida": "/home/hugohonda/Developer/ade-trabalho-final/unb-ade-trabalho-final/data/output/preprocessado.csv",
+  "npz_saida": "/home/hugohonda/Developer/ade-trabalho-final/unb-ade-trabalho-final/data/output/preprocessado.npz",
+  "colunas": [
+    "numero_divida_ativa",
+    "valor_total_corrigido",
+    "valor_original",
+    "codigo_receita",
+    "tipo_receita",
+    "descricao_receita",
+    "codigo_situacao_cda",
+    "ano_base",
+    "data_constituicao",
+    "valor",
+    "peso_horas"
+  ]
+}

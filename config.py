@@ -1,13 +1,14 @@
 from pathlib import Path
 
 # ========================= Caminhos base =========================
-BASE = Path("/home/hugohonda/Developer/ade-trabalho-final")
-OUT_DIR = BASE / "./data/output"
+# Define a BASE dinâmica como a pasta do repositório (onde este arquivo reside)
+BASE = Path(__file__).resolve().parent
+OUT_DIR = BASE / "data/output"
 
 # ========================= Arquivos de entrada/saída =========================
 # CSV bruto de entrada
-INPUT_SITAF = BASE / "./data/input/sitaf-dados-dt-final.csv"
-INPUT_ESTATISTICAS = BASE / "./data/input/estatisticas-processos.csv"
+INPUT_SITAF = BASE / "data/input/sitaf-dados-dt-final.csv"
+INPUT_ESTATISTICAS = BASE / "data/input/estatisticas-processos.csv"
 
 # Prefixo de saída do pré-processamento (gera .csv, .npz, .meta.json)
 OUTPUT_SIFAF = OUT_DIR / "preprocessado"
