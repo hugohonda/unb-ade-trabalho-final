@@ -83,7 +83,9 @@ def _mapear_tipo_tributo(valor_str: str) -> str:
     return "OUTROS"
 
 
-def carregar_fatores_por_tributo(caminho_estatisticas: Path) -> tuple[dict, float]:
+def carregar_fatores_por_tributo(
+    caminho_estatisticas: Path,
+) -> tuple[dict, float]:
     """
     Lê `estatisticas-processos.csv`, mapeia tipos de tributo e calcula
     a mediana de prazo em horas úteis a partir de `media_prazo` (dias):
@@ -163,7 +165,7 @@ def preprocessar_dados(caminho_csv: Path, prefixo_saida: Path) -> dict:
 
     # Valida presença das colunas mínimas necessárias
     if "valor_total_corrigido" not in df.columns:
-        raise KeyError("Coluna obrigatória 'valor_total_corrigido' ausente do dataset")
+        raise KeyError("Coluna obrigatória 'valor_total_corrigido' ausente")
 
     # Conversão de data (se existir)
     if "data_constituicao" in df.columns:

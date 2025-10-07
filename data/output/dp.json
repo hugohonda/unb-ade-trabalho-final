@@ -1,0 +1,10 @@
+{
+  "algoritmo": "dp",
+  "n_processos": 468,
+  "horas_total": 51063.66467309589,
+  "valor_total": 192465001.51,
+  "capacidade": 52800.0,
+  "resolucao": 8.0,
+  "top_k": 0,
+  "modo_filtro": "ratio"
+}

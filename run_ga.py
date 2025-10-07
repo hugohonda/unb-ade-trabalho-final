@@ -1,6 +1,7 @@
 import argparse
 import json
 import random
+import time
 from pathlib import Path
 
 import numpy as np
@@ -16,7 +17,7 @@ from config import (
     TAXA_CRUZAMENTO,
     TAXA_MUTACAO,
 )
-from utils import load_data, save_data
+from utils import build_summary, load_data, save_data
 
 
 def mochila_ag(
@@ -30,10 +31,10 @@ def mochila_ag(
     semente: int,
 ) -> list[int]:
     """
-    Algoritmo Genético para Mochila (0-1) com operadores
-        que preservam viabilidade.
+    Algoritmo Genético para Mochila (0-1)
+    com operadores que preservam viabilidade.
     Avaliação retorna 0 para soluções inviáveis,
-        favorecendo soluções factíveis.
+    favorecendo soluções factíveis.
     """
     if capacidade <= 0 or populacao <= 0 or geracoes <= 0:
         return []
@@ -164,7 +165,9 @@ def mochila_ag(
 
 
 def executar() -> None:
-    parser = argparse.ArgumentParser(description="Executar Mochila via AG")
+    parser = argparse.ArgumentParser(
+        description="Executar Mochila via Algoritmo Genético"
+    )
     parser.add_argument("--npz", type=Path, default=INPUT_PREPROCESSADO)
     parser.add_argument("--capacidade", type=float, default=CAPACIDADE_PADRAO)
     parser.add_argument("--pop", type=int, default=POPULACAO)
@@ -179,6 +182,7 @@ def executar() -> None:
     )
     args = parser.parse_args()
 
+    t0 = time.perf_counter()
     valores, pesos, _, caminho_csv = load_data(args.npz)
     idx_rel = mochila_ag(
         valores,
@@ -195,19 +199,24 @@ def executar() -> None:
     df = pd.read_csv(caminho_csv)
     df_sel = df.iloc[idx_abs].copy()
 
-    resumo = {
-        "algoritmo": "ag",
-        "n_processos": int(len(df_sel)),
-        "horas_total": float(df_sel["peso_horas"].sum()),
-        "valor_total": float(df_sel["valor"].sum()),
-        "capacidade": float(args.capacidade),
-        "pop": int(args.pop),
-        "gens": int(args.gens),
-        "cxpb": float(args.cxpb),
-        "mutpb": float(args.mutpb),
-        "seed": int(args.seed),
-    }
-    # Persiste seleção e resumo
+    elapsed = time.perf_counter() - t0
+
+    resumo = build_summary(
+        algorithm="ga",
+        inputs={"npz": args.npz, "csv": caminho_csv},
+        params={
+            "capacity": float(args.capacidade),
+            "population": int(args.pop),
+            "generations": int(args.gens),
+            "cxpb": float(args.cxpb),
+            "mutpb": float(args.mutpb),
+            "seed": int(args.seed),
+        },
+        df_candidates=df,
+        df_selected=df_sel,
+        elapsed_seconds=elapsed,
+    )
+
     save_data(args.prefixo_saida, df_sel, resumo)
     print(json.dumps(resumo, ensure_ascii=False, indent=2))
 

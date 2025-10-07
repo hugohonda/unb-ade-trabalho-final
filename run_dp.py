@@ -1,5 +1,6 @@
 import argparse
 import json
+import time
 from pathlib import Path
 
 import numpy as np
@@ -11,7 +12,7 @@ from config import (
     OUTPUT_PREFIXO_DP,
     RESOLUCAO_PADRAO,
 )
-from utils import load_data, save_data
+from utils import build_summary, load_data, save_data
 
 
 def mochila_dp(
@@ -107,6 +108,7 @@ def executar() -> None:
     )
     args = parser.parse_args()
 
+    t0 = time.perf_counter()
     valores, pesos, idx_map, caminho_csv = load_data(args.npz)
     valores_f, pesos_f, idx_f = filtrar_itens(
         valores,
@@ -120,16 +122,22 @@ def executar() -> None:
     df = pd.read_csv(caminho_csv)
     df_sel = df.iloc[idx_abs].copy()
 
-    resumo = {
-        "algoritmo": "dp",
-        "n_processos": int(len(df_sel)),
-        "horas_total": float(df_sel["peso_horas"].sum()),
-        "valor_total": float(df_sel["valor"].sum()),
-        "capacidade": float(args.capacidade),
-        "resolucao": float(args.resolucao),
-        "top_k": int(args.top_k),
-        "modo_filtro": args.modo_filtro,
-    }
+    elapsed = time.perf_counter() - t0
+
+    resumo = build_summary(
+        algorithm="dp",
+        inputs={"npz": args.npz, "csv": caminho_csv},
+        params={
+            "capacity": float(args.capacidade),
+            "resolution": float(args.resolucao),
+            "top_k": int(args.top_k),
+            "filter_mode": args.modo_filtro,
+        },
+        df_candidates=df,
+        df_selected=df_sel,
+        elapsed_seconds=elapsed,
+    )
+
     save_data(args.prefixo_saida, df_sel, resumo)
     print(json.dumps(resumo, ensure_ascii=False, indent=2))
 

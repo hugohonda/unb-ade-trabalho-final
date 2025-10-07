@@ -1,5 +1,6 @@
 import argparse
 import json
+import time
 from pathlib import Path
 
 import numpy as np
@@ -10,7 +11,7 @@ from config import (
     INPUT_PREPROCESSADO,
     OUTPUT_PREFIXO_GULOSO,
 )
-from utils import load_data, save_data
+from utils import build_summary, load_data, save_data
 
 
 def mochila_gulosa(
@@ -44,24 +45,25 @@ def executar() -> None:
     )
     args = parser.parse_args()
 
-    # Carrega vetores numéricos (valor, peso) e o CSV correspondente
+    t0 = time.perf_counter()
     valores, pesos, _, caminho_csv = load_data(args.npz)
-    # Executa heurística gulosa
     idx_rel = mochila_gulosa(valores, pesos, args.capacidade)
-    # Converte índices relativos (no NPZ) para absolutos (no CSV filtrado)
     idx_abs = np.arange(len(valores))[idx_rel]
 
     df = pd.read_csv(caminho_csv)
     df_sel = df.iloc[idx_abs].copy()
 
-    resumo = {
-        "algoritmo": "guloso",
-        "n_processos": int(len(df_sel)),
-        "horas_total": float(df_sel["peso_horas"].sum()),
-        "valor_total": float(df_sel["valor"].sum()),
-        "capacidade": float(args.capacidade),
-    }
-    # Persiste seleção e resumo
+    elapsed = time.perf_counter() - t0
+
+    resumo = build_summary(
+        algorithm="greedy",
+        inputs={"npz": args.npz, "csv": caminho_csv},
+        params={"capacity": float(args.capacidade)},
+        df_candidates=df,
+        df_selected=df_sel,
+        elapsed_seconds=elapsed,
+    )
+
     save_data(args.prefixo_saida, df_sel, resumo)
     print(json.dumps(resumo, ensure_ascii=False, indent=2))
 
