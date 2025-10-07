@@ -6,9 +6,9 @@ import numpy as np
 import pandas as pd
 
 from config import (
+    CAPACIDADE_PADRAO,
     INPUT_PREPROCESSADO,
     OUTPUT_PREFIXO_DP,
-    CAPACIDADE_PADRAO,
     RESOLUCAO_PADRAO,
 )
 from utils import load_data, save_data
@@ -21,6 +21,8 @@ def mochila_dp(
     Programação Dinâmica 0-1 com otimização de espaço.
     Retorna índices relativos dos itens selecionados.
     """
+    if capacidade <= 0 or resolucao <= 0:
+        return []
     # Filtra itens que cabem na mochila
     itens_validos = pesos <= capacidade
     if not itens_validos.any():
@@ -30,8 +32,9 @@ def mochila_dp(
     pesos_filtrados = pesos[itens_validos]
     indices_originais = np.where(itens_validos)[0]
 
-    # Discretização
-    pesos_discretos = (np.round(pesos_filtrados / resolucao)).astype(int)
+    # Discretização: usa ceil para garantir que peso discreto não subestime o
+    # contínuo e floor na capacidade para não permitir ultrapassar.
+    pesos_discretos = (np.ceil(pesos_filtrados / resolucao)).astype(int)
     capacidade_discreta = int(np.floor(capacidade / resolucao))
     n = len(valores_filtrados)
 
@@ -44,11 +47,11 @@ def mochila_dp(
         peso_i = pesos_discretos[i]
         valor_i = valores_filtrados[i]
 
-        # Copia linha anterior
+        # Copia linha anterior (transição 0/1 com otimização de duas linhas)
         atual[:] = anterior
 
         if peso_i <= capacidade_discreta:
-            # Calcula candidato: anterior[j - peso_i] + valor_i
+            # Calcula candidato: incluir item i versus não incluir
             for j in range(peso_i, capacidade_discreta + 1):
                 candidato = anterior[j - peso_i] + valor_i
                 if candidato > atual[j]:
@@ -58,7 +61,7 @@ def mochila_dp(
         # Troca as linhas
         anterior, atual = atual, anterior
 
-    # Reconstrói solução
+    # Reconstrói solução percorrendo de trás para frente
     selecionados = []
     restante = capacidade_discreta
 

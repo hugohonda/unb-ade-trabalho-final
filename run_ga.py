@@ -7,14 +7,14 @@ import numpy as np
 import pandas as pd
 
 from config import (
+    CAPACIDADE_PADRAO,
+    GERACOES,
     INPUT_PREPROCESSADO,
     OUTPUT_PREFIXO_AG,
-    CAPACIDADE_PADRAO,
     POPULACAO,
-    GERACOES,
+    SEMENTE,
     TAXA_CRUZAMENTO,
     TAXA_MUTACAO,
-    SEMENTE,
 )
 from utils import load_data, save_data
 
@@ -29,7 +29,14 @@ def mochila_ag(
     taxa_mutacao: float,
     semente: int,
 ) -> list[int]:
-    """Algoritmo Genético para Mochila (0-1) com operadores corretos."""
+    """
+    Algoritmo Genético para Mochila (0-1) com operadores
+        que preservam viabilidade.
+    Avaliação retorna 0 para soluções inviáveis,
+        favorecendo soluções factíveis.
+    """
+    if capacidade <= 0 or populacao <= 0 or geracoes <= 0:
+        return []
     rnd = random.Random(semente)
     n = len(valores)
 
@@ -41,7 +48,7 @@ def mochila_ag(
         return sum(valores[i] for i, b in enumerate(bitset) if b)
 
     def individuo_aleatorio():
-        """Gera indivíduo aleatório respeitando capacidade."""
+        """Gera indivíduo aleatório respeitando a capacidade por construção."""
         individuo = [0] * n
         peso_atual = 0.0
 
@@ -58,7 +65,7 @@ def mochila_ag(
         return individuo
 
     def selecao_torneio(pop, tamanho_torneio=3):
-        """Seleção por torneio."""
+        """Seleção por torneio com reposição simples."""
         selecionados = []
         for _ in range(len(pop)):
             torneio = rnd.sample(pop, min(tamanho_torneio, len(pop)))
@@ -67,7 +74,7 @@ def mochila_ag(
         return selecionados
 
     def cruzar(p1, p2):
-        """Crossover uniforme que mantém viabilidade."""
+        """Crossover uniforme que tenta manter viabilidade ao herdar genes."""
         if rnd.random() > taxa_cruzamento:
             return p1[:], p2[:]
 
@@ -95,7 +102,7 @@ def mochila_ag(
         return f1, f2
 
     def mutar(ind):
-        """Mutação que mantém viabilidade."""
+        """Mutação bit a bit respeitando capacidade quando possível."""
         peso_atual = sum(pesos[i] for i, b in enumerate(ind) if b)
 
         for i in range(n):
@@ -112,12 +119,12 @@ def mochila_ag(
 
         return ind
 
-    # Inicialização
+    # Inicialização da população
     populacao_atual = [individuo_aleatorio() for _ in range(populacao)]
     melhor = max(populacao_atual, key=aptidao)
     melhor_fit = aptidao(melhor)
 
-    # Evolução
+    # Laço evolutivo principal
     for geracao in range(geracoes):
         # Seleção
         selecionados = selecao_torneio(populacao_atual)
@@ -126,7 +133,10 @@ def mochila_ag(
         proxima_geracao = []
         for i in range(0, len(selecionados), 2):
             p1 = selecionados[i]
-            p2 = selecionados[i + 1] if i + 1 < len(selecionados) else selecionados[0]
+            if i + 1 < len(selecionados):
+                p2 = selecionados[i + 1]
+            else:
+                p2 = selecionados[0]
 
             f1, f2 = cruzar(p1, p2)
             f1 = mutar(f1)
@@ -134,7 +144,7 @@ def mochila_ag(
 
             proxima_geracao.extend([f1, f2])
 
-        # Elitismo: mantém o melhor
+        # Elitismo: mantém o melhor indivíduo observado
         proxima_geracao = proxima_geracao[:populacao]
         cand_melhor = max(proxima_geracao, key=aptidao)
         if aptidao(cand_melhor) > melhor_fit:
@@ -143,7 +153,8 @@ def mochila_ag(
 
         # Substitui pior indivíduo pelo melhor
         pior_idx = min(
-            range(len(proxima_geracao)), key=lambda k: aptidao(proxima_geracao[k])
+            range(len(proxima_geracao)),
+            key=lambda k: aptidao(proxima_geracao[k]),
         )
         proxima_geracao[pior_idx] = melhor[:]
 
@@ -196,6 +207,7 @@ def executar() -> None:
         "mutpb": float(args.mutpb),
         "seed": int(args.seed),
     }
+    # Persiste seleção e resumo
     save_data(args.prefixo_saida, df_sel, resumo)
     print(json.dumps(resumo, ensure_ascii=False, indent=2))
 

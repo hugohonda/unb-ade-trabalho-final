@@ -6,9 +6,9 @@ import numpy as np
 import pandas as pd
 
 from config import (
+    CAPACIDADE_PADRAO,
     INPUT_PREPROCESSADO,
     OUTPUT_PREFIXO_GULOSO,
-    CAPACIDADE_PADRAO,
 )
 from utils import load_data, save_data
 
@@ -16,7 +16,13 @@ from utils import load_data, save_data
 def mochila_gulosa(
     valores: np.ndarray, pesos: np.ndarray, capacidade: float
 ) -> list[int]:
-    """Seleciona itens por maior razão valor/peso até atingir a capacidade."""
+    """
+    Seleciona itens pela maior razão valor/peso até atingir a capacidade.
+    Estratégia: ordena por eficiência (valor por hora) e inclui
+    enquanto couber.
+    """
+    if capacidade <= 0:
+        return []
     ordem = np.argsort(-(valores / pesos))
     peso_total = 0.0
     escolhidos = []
@@ -38,8 +44,11 @@ def executar() -> None:
     )
     args = parser.parse_args()
 
+    # Carrega vetores numéricos (valor, peso) e o CSV correspondente
     valores, pesos, _, caminho_csv = load_data(args.npz)
+    # Executa heurística gulosa
     idx_rel = mochila_gulosa(valores, pesos, args.capacidade)
+    # Converte índices relativos (no NPZ) para absolutos (no CSV filtrado)
     idx_abs = np.arange(len(valores))[idx_rel]
 
     df = pd.read_csv(caminho_csv)
@@ -52,6 +61,7 @@ def executar() -> None:
         "valor_total": float(df_sel["valor"].sum()),
         "capacidade": float(args.capacidade),
     }
+    # Persiste seleção e resumo
     save_data(args.prefixo_saida, df_sel, resumo)
     print(json.dumps(resumo, ensure_ascii=False, indent=2))
 
